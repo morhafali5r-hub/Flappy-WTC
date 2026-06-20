@@ -121,6 +121,7 @@
     z-index:50;
     background:#fff;
     opacity:0;
+    transition: opacity 0.1s;
   }
 
   #crackOverlay{
@@ -510,7 +511,6 @@
     z-index:48;
     background:rgba(255,30,30,0.35);
     opacity:0;
-    transition:opacity 0.08s;
   }
 
   /* ==================================================
@@ -763,6 +763,20 @@
     50% { opacity: 1; text-shadow: 0 0 20px rgba(94,241,255,0.6), 0 0 30px rgba(94,241,255,0.2); }
   }
 
+  .heidi-quote {
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: #ffb6c1;
+    text-shadow: 0 0 8px #ff69b4;
+    margin-top: 6px;
+    animation: pulseHeidiText 2s infinite;
+  }
+  @keyframes pulseHeidiText {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; text-shadow: 0 0 12px #ff1493; }
+  }
+
   /* DELETE DATA BUTTON */
   .delete-data-btn {
     position: absolute;
@@ -971,6 +985,7 @@
         <button class="shop-open-btn" id="shopBtnStart">🛒 STORE</button>
         <button class="cheat-trigger-btn" id="cheatBtnStart">CHEATCODE</button>
         <div class="programmer-credit">Programmed by Morhaf</div>
+        <div id="heidiQuoteStart" class="heidi-quote hidden">1 heidi = all people ...</div>
       </div>
     </div>
 
@@ -1032,6 +1047,7 @@
         <button class="glow-btn" id="shopCloseBtn" style="width:100%; max-width: 480px;">✕ CLOSE STORE</button>
         <button class="cheat-trigger-btn" id="cheatBtnShop">CHEATCODE</button>
         <div class="programmer-credit">Programmed by Morhaf</div>
+        <div id="heidiQuoteShop" class="heidi-quote hidden">1 heidi = all people ...</div>
       </div>
     </div>
 
@@ -1243,6 +1259,8 @@
   const crackOverlay     = document.getElementById('crackOverlay');
   const popupLayer       = document.getElementById('popupLayer');
   const heidiTitle       = document.getElementById('heidiTitle');
+  const heidiQuoteStart  = document.getElementById('heidiQuoteStart');
+  const heidiQuoteShop   = document.getElementById('heidiQuoteShop');
 
   muteBtn.innerHTML = muted ? '<span class="muted-icon"></span>' : '<span class="unmuted-icon"></span>';
 
@@ -1281,12 +1299,18 @@
     if(equippedTheme === 'theme1'){
       images.player = images['theme1'];
       heidiTitle.classList.add('hidden');
+      if(heidiQuoteStart) heidiQuoteStart.classList.add('hidden');
+      if(heidiQuoteShop) heidiQuoteShop.classList.add('hidden');
     } else if(equippedTheme === 'theme_heidi') {
       images.player = images['heidi'];
       heidiTitle.classList.remove('hidden');
+      if(heidiQuoteStart) heidiQuoteStart.classList.remove('hidden');
+      if(heidiQuoteShop) heidiQuoteShop.classList.remove('hidden');
     } else {
       images.player = images[equippedSkin] || images['t2_default'];
       heidiTitle.classList.add('hidden');
+      if(heidiQuoteStart) heidiQuoteStart.classList.add('hidden');
+      if(heidiQuoteShop) heidiQuoteShop.classList.add('hidden');
     }
   }
 
@@ -1294,9 +1318,11 @@
      PIPES
   ====================================================== */
   let pipes = [];
+  let pipesPassedThisRun = 0; // The true measure of difficulty progression
 
   function resetPipes(){
     pipes = [];
+    pipesPassedThisRun = 0;
     const startX = W + S(40);
     for(let i=0;i<4;i++){ spawnPipe(startX + i*PIPE_SPACING()); }
   }
@@ -1313,12 +1339,14 @@
   }
 
   function currentPipeGap(){
-    const reduction = Math.min(score * S(0.9), PIPE_GAP_BASE() - PIPE_GAP_MIN());
+    // Use pipesPassedThisRun to ensure difficulty scales consistently across themes
+    const reduction = Math.min(pipesPassedThisRun * S(0.9), PIPE_GAP_BASE() - PIPE_GAP_MIN());
     return PIPE_GAP_BASE() - reduction;
   }
 
   function currentPipeSpeed(){
-    const increase = Math.min(score * S(0.035), PIPE_SPEED_MAX() - PIPE_SPEED_BASE());
+    // Use pipesPassedThisRun to ensure speed scales consistently across themes
+    const increase = Math.min(pipesPassedThisRun * S(0.035), PIPE_SPEED_MAX() - PIPE_SPEED_BASE());
     return PIPE_SPEED_BASE() + increase;
   }
 
@@ -1326,14 +1354,14 @@
      SCORE & POPUPS
   ====================================================== */
   let score = 0;
-  function spawnScorePopup(){
+  function spawnScorePopup(val){
     const el = document.createElement('div');
     el.className = 'score-popup';
     if(equippedTheme === 'theme_heidi') {
       el.style.color = '#ff69b4';
       el.style.textShadow = '0 0 10px #ff1493';
     }
-    el.textContent = '+1';
+    el.textContent = '+' + val;
     el.style.left = (player.x + player.size) + 'px';
     el.style.top = (player.y) + 'px';
     popupLayer.appendChild(el);
@@ -1377,6 +1405,17 @@
     }
   }
 
+  function addCuteExplosionParticles(cx, cy){
+    for(let i=0;i<60;i++){
+      const angle = Math.random()*Math.PI*2; const speed = 1 + Math.random()*6;
+      particles.push({
+        type:'explosion', x:cx, y:cy, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed,
+        life:1, decay:0.01 + Math.random()*0.02, size:3 + Math.random()*6,
+        color: Math.random()<0.5 ? '255,105,180' : '255,182,193'
+      });
+    }
+  }
+
   function updateParticles(){
     for(let i=particles.length-1;i>=0;i--){
       const p = particles[i];
@@ -1409,8 +1448,8 @@
   }
 
   function drawBackground(dt, speedMultiplier){
-    if (equippedTheme === 'theme1' || equippedTheme === 'theme_heidi') {
-      // THEME 1 & Heidi: Classic Retro Arcade Sky
+    if (equippedTheme === 'theme1') {
+      // THEME 1: Classic Retro Arcade Sky
       const grad = ctx.createLinearGradient(0,0,0,H);
       grad.addColorStop(0,'#4ec0ca');
       grad.addColorStop(1,'#8deaf5');
@@ -1424,6 +1463,23 @@
         drawCloudShape(c.x + W, c.y, c.w, c.h);
         c.x -= c.speed * speedMultiplier;
         if(c.x < -c.w) c.x += W + c.w;
+      }
+    } else if (equippedTheme === 'theme_heidi') {
+      // Heidi Theme: Indigo night with pink clouds and stars
+      const grad = ctx.createLinearGradient(0,0,0,H);
+      grad.addColorStop(0,'#1a1b41');
+      grad.addColorStop(1,'#3f3d70');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0,0,W,H);
+
+      for(const s of bgStars){
+        const tw = 0.5 + 0.5*Math.sin(bgTime*0.002*s.speed + s.tw);
+        ctx.fillStyle = `rgba(255,200,220,${0.2+tw*0.4})`; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+      }
+      for(const c of bgClouds){
+        ctx.fillStyle = `rgba(255,182,193,${c.alpha * 3})`; 
+        drawCloudShape(c.x, c.y, c.w, c.h); drawCloudShape(c.x + W, c.y, c.w, c.h);
+        c.x -= c.speed * speedMultiplier; if(c.x < -c.w) c.x += W + c.w;
       }
     } else {
       // THEME 2: Military Futuristic Night
@@ -1471,22 +1527,35 @@
   let groundScrollX = 0;
   function drawGround(speedMultiplier){
     const gy = H - GROUND_HEIGHT();
-    if (equippedTheme === 'theme1' || equippedTheme === 'theme_heidi') {
+    if (equippedTheme === 'theme1') {
       const grad = ctx.createLinearGradient(0,gy,0,H);
       grad.addColorStop(0,'#73bf2e');
       grad.addColorStop(1,'#569022');
       ctx.fillStyle = grad;
       ctx.fillRect(0,gy,W,GROUND_HEIGHT());
 
-      // classic top block
       ctx.fillStyle = '#548f21';
       ctx.fillRect(0,gy,W,4);
 
-      // scrolling marks
       const segW = S(40);
       ctx.fillStyle = 'rgba(0,0,0,0.1)';
       for(let x = -((groundScrollX) % segW); x < W; x += segW){
         ctx.fillRect(x, gy+6, segW*0.3, GROUND_HEIGHT()-12);
+      }
+    } else if (equippedTheme === 'theme_heidi') {
+      const grad = ctx.createLinearGradient(0,gy,0,H);
+      grad.addColorStop(0,'#2d2b55');
+      grad.addColorStop(1,'#1a1936');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0,gy,W,GROUND_HEIGHT());
+
+      ctx.fillStyle = '#ff69b4'; // Pink edge
+      ctx.fillRect(0,gy,W,3);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      const segW = S(40);
+      for(let x = -((groundScrollX) % segW); x < W; x += segW){
+          ctx.fillRect(x, gy+6, segW*0.3, GROUND_HEIGHT()-12);
       }
     } else {
       const grad = ctx.createLinearGradient(0,gy,0,H);
@@ -1566,8 +1635,12 @@
     ctx.save();
     ctx.translate(player.x + player.size/2, player.y + player.size/2);
     ctx.rotate(player.rotation);
-    if(equippedTheme === 'theme2') { ctx.shadowColor = 'rgba(94,241,255,0.55)'; ctx.shadowBlur = 16; }
-    if(equippedTheme === 'theme_heidi') { ctx.shadowColor = 'rgba(255,105,180,0.55)'; ctx.shadowBlur = 16; }
+    if(equippedTheme === 'theme2') { 
+      ctx.shadowColor = 'rgba(94,241,255,0.55)'; ctx.shadowBlur = 16; 
+    }
+    if(equippedTheme === 'theme_heidi') { 
+      ctx.shadowColor = 'rgba(255,105,180,0.8)'; ctx.shadowBlur = 20; 
+    }
     ctx.drawImage(img, -player.size/2, -player.size/2, player.size, player.size);
     ctx.restore();
   }
@@ -1598,11 +1671,19 @@
       const pw = PIPE_WIDTH();
       for(const p of pipes){
         if(!p.passed && p.x + pw < player.x){
-          p.passed = true; score++; scoreText.textContent = score; sfx.score();
-          spawnScorePopup(); scoreText.classList.add('shake'); setTimeout(()=>scoreText.classList.remove('shake'), 200);
-          addCurrency(1);
-          pipesPassedThisRun++; if(pipesPassedThisRun % 15 === 0){ addLife(); }
-          if(score === 911) triggerSecretSequence();
+          p.passed = true; 
+          pipesPassedThisRun++; // True measure of distance
+          
+          let pointsToAdd = (equippedTheme === 'theme_heidi') ? 10 : 1;
+          score += pointsToAdd; 
+          scoreText.textContent = score; 
+          sfx.score();
+          spawnScorePopup(pointsToAdd); 
+          scoreText.classList.add('shake'); setTimeout(()=>scoreText.classList.remove('shake'), 200);
+          addCurrency(pointsToAdd);
+
+          if(pipesPassedThisRun % 15 === 0){ addLife(); }
+          if(score >= 911 && score - pointsToAdd < 911) triggerSecretSequence(); // Trigger exactly or passing 911
         }
       }
 
@@ -1646,8 +1727,17 @@
     const cx = player.x + player.size/2; const cy = player.y + player.size/2;
     const radius = player.size * (1.5 + t*2.5);
     const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,radius);
-    grad.addColorStop(0, `rgba(255,${200-Math.floor(t*120)},80,${0.7*(1-t)})`);
-    grad.addColorStop(0.5, `rgba(255,90,40,${0.35*(1-t)})`); grad.addColorStop(1, 'rgba(255,40,20,0)');
+    
+    if (equippedTheme === 'theme_heidi') {
+      grad.addColorStop(0, `rgba(255,105,180,${0.7*(1-t)})`);
+      grad.addColorStop(0.5, `rgba(255,182,193,${0.35*(1-t)})`); 
+      grad.addColorStop(1, 'rgba(255,192,203,0)');
+    } else {
+      grad.addColorStop(0, `rgba(255,${200-Math.floor(t*120)},80,${0.7*(1-t)})`);
+      grad.addColorStop(0.5, `rgba(255,90,40,${0.35*(1-t)})`); 
+      grad.addColorStop(1, 'rgba(255,40,20,0)');
+    }
+    
     ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(cx,cy,radius,0,Math.PI*2); ctx.fill();
   }
 
@@ -1671,7 +1761,7 @@
       lives = 1; extraLifeUses--; saveData();
     }
 
-    pipesPassedThisRun = 0; invincible = false; invincTimer = 0; slowMoTimer = 0; wrap.style.animation = '';
+    invincible = false; invincTimer = 0; slowMoTimer = 0; wrap.style.animation = '';
     renderLivesHud(); livesHud.classList.add('visible'); showCurrencyHud();
     applyEquippedSkin();
 
@@ -1681,15 +1771,40 @@
 
   let deathTimer = 0; const DEATH_EXPLOSION_DURATION = 850;
   function triggerDeathExplosion(){
-    gameState = STATE.DYING; deathTimer = 0; sfx.hit(); setTimeout(()=>sfx.explosion(), 90);
-    screenShake = 22; flashOverlay.style.background = '#ffffff'; flashOverlay.style.opacity = '0.85'; chromaticOverlay.style.opacity = '0.6';
-    const cx = player.x + player.size/2; const cy = player.y + player.size/2; addExplosionParticles(cx, cy); addExplosionParticles(cx, cy);
+    gameState = STATE.DYING; deathTimer = 0; 
+    
+    const cx = player.x + player.size/2; const cy = player.y + player.size/2; 
+    
+    if (equippedTheme === 'theme_heidi') {
+      sfx.hit(); 
+      screenShake = 10; 
+      flashOverlay.style.background = '#ffb6c1'; 
+      flashOverlay.style.opacity = '0.7'; 
+      chromaticOverlay.style.opacity = '0.3';
+      addCuteExplosionParticles(cx, cy); 
+      addCuteExplosionParticles(cx, cy);
+    } else {
+      sfx.hit(); setTimeout(()=>sfx.explosion(), 90);
+      screenShake = 22; 
+      flashOverlay.style.background = '#ffffff'; 
+      flashOverlay.style.opacity = '0.85'; 
+      chromaticOverlay.style.opacity = '0.6';
+      addExplosionParticles(cx, cy); 
+      addExplosionParticles(cx, cy);
+    }
+    
     player.vy = 0; document.body.classList.add('shake'); hud.classList.add('hidden'); livesHud.classList.remove('visible'); heidiTitle.classList.add('hidden');
   }
 
   function updateDeathExplosion(dt){
-    deathTimer += dt; const flashT = Math.min(deathTimer/250, 1); flashOverlay.style.opacity = String(Math.max(0.85 - flashT*0.85, 0));
-    const chromaT = Math.min(deathTimer/400, 1); chromaticOverlay.style.opacity = String(Math.max(0.6 - chromaT*0.6, 0));
+    deathTimer += dt; const flashT = Math.min(deathTimer/250, 1); 
+    const maxFlashOpacity = equippedTheme === 'theme_heidi' ? 0.7 : 0.85;
+    flashOverlay.style.opacity = String(Math.max(maxFlashOpacity - flashT*maxFlashOpacity, 0));
+    
+    const chromaT = Math.min(deathTimer/400, 1); 
+    const maxChroma = equippedTheme === 'theme_heidi' ? 0.3 : 0.6;
+    chromaticOverlay.style.opacity = String(Math.max(maxChroma - chromaT*maxChroma, 0));
+    
     if(deathTimer >= DEATH_EXPLOSION_DURATION){
       document.body.classList.remove('shake'); flashOverlay.style.opacity = '0'; chromaticOverlay.style.opacity = '0'; handleGameOver();
     }
@@ -1826,7 +1941,7 @@
     el.style.left = (player.x + player.size + 10) + 'px'; el.style.top = (Math.max(player.y - 20, 30)) + 'px'; popupLayer.appendChild(el); setTimeout(()=> el.remove(), 900);
   }
   
-  let lives = 0; let invincible = false; let invincTimer = 0; const INVINC_DURATION = 2200; let pipesPassedThisRun = 0;
+  let lives = 0; let invincible = false; let invincTimer = 0; const INVINC_DURATION = 2200;
   const livesHud = document.getElementById('livesHud'); const damageFlash = document.getElementById('damageFlash');
   function renderLivesHud(){ livesHud.innerHTML=''; for(let i=0;i<lives;i++){ const h=document.createElement('div'); h.className='heart-icon'; h.textContent='❤️'; livesHud.appendChild(h); } }
   function addLife(){ if(lives >= 5) return; lives++; renderLivesHud(); const hearts = livesHud.querySelectorAll('.heart-icon'); const last = hearts[hearts.length-1]; if(last){ last.classList.add('pulse'); setTimeout(()=>last.classList.remove('pulse'),400); } const lp = document.createElement('div'); lp.className='life-popup'; lp.textContent='+1 ❤️'; lp.style.left=(W*0.1)+'px'; lp.style.top=(H*0.75)+'px'; popupLayer.appendChild(lp); setTimeout(()=>lp.remove(),1000); }

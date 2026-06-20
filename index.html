@@ -59,6 +59,27 @@
     top:0;left:0;
   }
 
+  /* ============ FLAPPY HEIDI TITLE ============ */
+  #heidiTitle {
+    position: absolute;
+    top: 15%; left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(28px, 8vw, 42px);
+    font-weight: 900;
+    color: #ffb6c1;
+    text-shadow: 0 0 15px #ff69b4, 0 0 30px #ff1493;
+    letter-spacing: 6px;
+    z-index: 24;
+    pointer-events: none;
+    opacity: 0.8;
+    animation: floatHeidi 3s ease-in-out infinite;
+    white-space: nowrap;
+  }
+  @keyframes floatHeidi {
+    0%, 100% { transform: translate(-50%, 0); }
+    50% { transform: translate(-50%, -8px); }
+  }
+
   /* ============ VIGNETTE & SCANLINES ============ */
   #vignette{
     position:absolute;inset:0;
@@ -625,6 +646,15 @@
     background:rgba(30, 10, 15, 0.85);
     box-shadow:0 0 25px rgba(255,59,78,0.2);
   }
+  .shop-card.heidi{
+    border-color:rgba(255,105,180,0.6);
+    background:rgba(40, 10, 30, 0.85);
+    box-shadow:0 0 25px rgba(255,105,180,0.2);
+  }
+  .shop-card.heidi.equipped{
+    background:rgba(60, 15, 45, 0.9);
+    box-shadow:0 0 30px rgba(255,105,180,0.4), inset 0 0 15px rgba(255,105,180,0.1);
+  }
   
   .card-img-wrap {
     width: 80px; height: 80px;
@@ -673,6 +703,15 @@
     background: rgba(94,241,255,0.1); border-color: rgba(94,241,255,0.6); color: var(--neon-cyan); cursor: default;
   }
   .shop-btn.equipped-btn:active { transform: none; }
+
+  /* Heidi pink button */
+  .shop-btn.heidi-equip-btn {
+    background: rgba(255,105,180,0.15); border-color: rgba(255,105,180,0.6); color: #ffb6c1; cursor: pointer; text-shadow: 0 0 8px #ff69b4;
+  }
+  .shop-btn.heidi-equip-btn:hover { box-shadow:0 0 25px rgba(255,105,180,0.4); background: rgba(255,105,180,0.25); }
+  .shop-btn.heidi-equipped-btn {
+    background: rgba(255,105,180,0.2); border-color: rgba(255,105,180,0.8); color: #fff; cursor: default; text-shadow: 0 0 10px #ff69b4; box-shadow: 0 0 15px rgba(255,105,180,0.3);
+  }
   
   .shop-btn.disabled-btn{ opacity:0.35; cursor:not-allowed; background:rgba(255,255,255,0.04); }
 
@@ -804,6 +843,10 @@
     border-color:rgba(94,241,255,0.9);
     box-shadow:0 0 24px rgba(94,241,255,0.4);
   }
+  .cheat-input.success-pink{
+    border-color:#ff69b4;
+    box-shadow:0 0 24px rgba(255,105,180,0.6);
+  }
   @keyframes glitchShake{
     0%,100%{transform:translateX(0);}
     20%{transform:translateX(-8px);}
@@ -819,6 +862,7 @@
     transition:color 0.2s;
   }
   .cheat-msg.ok{color:var(--neon-cyan); text-shadow:0 0 8px var(--neon-cyan);}
+  .cheat-msg.ok-pink{color:#ffb6c1; text-shadow:0 0 10px #ff69b4;}
   .cheat-msg.err{color:var(--neon-red); text-shadow:0 0 8px var(--neon-red);}
   .cheat-particles{
     position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:20px;
@@ -878,6 +922,9 @@
   <div id="gameWrap">
 
     <canvas id="gameCanvas"></canvas>
+    
+    <!-- Secret Heidi Title Overlay -->
+    <div id="heidiTitle" class="hidden">FLAPPY HEIDI</div>
 
     <!-- HUD -->
     <div id="hud" class="hidden">
@@ -1056,6 +1103,7 @@
   let unlockedSkins = JSON.parse(localStorage.getItem('skyfall_skins') || '["t2_default"]');
   let equippedSkin = localStorage.getItem('skyfall_eq_skin') || 't2_default';
   let extraLifeUses = parseInt(localStorage.getItem('skyfall_extralife') || '0', 10);
+  let heidiUnlocked = (localStorage.getItem('skyfall_heidi_unlocked') === 'true');
 
   function saveData(){
     localStorage.setItem('skyfall_currency', String(totalCurrency));
@@ -1064,6 +1112,7 @@
     localStorage.setItem('skyfall_skins', JSON.stringify(unlockedSkins));
     localStorage.setItem('skyfall_eq_skin', equippedSkin);
     localStorage.setItem('skyfall_extralife', String(extraLifeUses));
+    localStorage.setItem('skyfall_heidi_unlocked', String(heidiUnlocked));
   }
 
   const THEMES = [
@@ -1092,7 +1141,8 @@
   const ASSET_URLS = {
     pipe1:   'https://i.postimg.cc/mrM5jGpp/Segment-20260614-214947963.png',
     pipe2:   'https://i.postimg.cc/vm9Nhd2q/Segment-20260614-214951131.png',
-    t1_pipe: 'https://i.postimg.cc/ncGdbwVD/Segment-20260615-153846635.png'
+    t1_pipe: 'https://i.postimg.cc/ncGdbwVD/Segment-20260615-153846635.png',
+    heidi:   'https://i.postimg.cc/RCGFCgtF/Picsart-26-06-20-04-03-04-873.png'
   };
 
   const images = {};
@@ -1192,6 +1242,7 @@
   const flashOverlay     = document.getElementById('flashOverlay');
   const crackOverlay     = document.getElementById('crackOverlay');
   const popupLayer       = document.getElementById('popupLayer');
+  const heidiTitle       = document.getElementById('heidiTitle');
 
   muteBtn.innerHTML = muted ? '<span class="muted-icon"></span>' : '<span class="unmuted-icon"></span>';
 
@@ -1229,8 +1280,13 @@
   function applyEquippedSkin(){
     if(equippedTheme === 'theme1'){
       images.player = images['theme1'];
+      heidiTitle.classList.add('hidden');
+    } else if(equippedTheme === 'theme_heidi') {
+      images.player = images['heidi'];
+      heidiTitle.classList.remove('hidden');
     } else {
       images.player = images[equippedSkin] || images['t2_default'];
+      heidiTitle.classList.add('hidden');
     }
   }
 
@@ -1273,6 +1329,10 @@
   function spawnScorePopup(){
     const el = document.createElement('div');
     el.className = 'score-popup';
+    if(equippedTheme === 'theme_heidi') {
+      el.style.color = '#ff69b4';
+      el.style.textShadow = '0 0 10px #ff1493';
+    }
     el.textContent = '+1';
     el.style.left = (player.x + player.size) + 'px';
     el.style.top = (player.y) + 'px';
@@ -1285,7 +1345,10 @@
   ====================================================== */
   let particles = [];
   function addFlapParticles(){
-    const color = equippedTheme === 'theme1' ? '255,255,255' : '94,241,255';
+    let color = '94,241,255';
+    if (equippedTheme === 'theme1') color = '255,255,255';
+    if (equippedTheme === 'theme_heidi') color = '255,105,180';
+
     for(let i=0;i<6;i++){
       particles.push({
         type:'flap',
@@ -1346,8 +1409,8 @@
   }
 
   function drawBackground(dt, speedMultiplier){
-    if (equippedTheme === 'theme1') {
-      // THEME 1: Classic Retro Arcade Sky
+    if (equippedTheme === 'theme1' || equippedTheme === 'theme_heidi') {
+      // THEME 1 & Heidi: Classic Retro Arcade Sky
       const grad = ctx.createLinearGradient(0,0,0,H);
       grad.addColorStop(0,'#4ec0ca');
       grad.addColorStop(1,'#8deaf5');
@@ -1408,7 +1471,7 @@
   let groundScrollX = 0;
   function drawGround(speedMultiplier){
     const gy = H - GROUND_HEIGHT();
-    if (equippedTheme === 'theme1') {
+    if (equippedTheme === 'theme1' || equippedTheme === 'theme_heidi') {
       const grad = ctx.createLinearGradient(0,gy,0,H);
       grad.addColorStop(0,'#73bf2e');
       grad.addColorStop(1,'#569022');
@@ -1442,16 +1505,13 @@
     const pw = PIPE_WIDTH();
     for(const p of pipes){
       let topImg, bottomImg;
-      if (equippedTheme === 'theme1') {
-        // Theme 1 Specific: Original image faces DOWN, so it is topImg.
-        // Flipped image faces UP, so it is bottomImg.
+      if (equippedTheme === 'theme1' || equippedTheme === 'theme_heidi') {
         const img = images['t1_pipe'];
         const flipped = flippedImages['t1_pipe'];
         if(!img) continue;
         topImg = img;
         bottomImg = flipped;
       } else {
-        // Theme 2: Original image faces UP, flipped faces DOWN.
         const img = images[p.style]; 
         const flipped = flippedImages[p.style]; 
         if(!img) continue;
@@ -1465,6 +1525,11 @@
       
       ctx.save();
       if(equippedTheme === 'theme2') { ctx.shadowColor = 'rgba(94,241,255,0.18)'; ctx.shadowBlur = 14; }
+      
+      // Magical Hue Rotate for Heidi Pink Pipes
+      if(equippedTheme === 'theme_heidi'){
+        ctx.filter = 'hue-rotate(190deg) saturate(140%) brightness(1.1)';
+      }
       
       if(topHeight > 0) ctx.drawImage(topImg, p.x, 0, pw, topHeight);
       if(bottomHeight > 0) ctx.drawImage(bottomImg, p.x, bottomY, pw, bottomHeight);
@@ -1502,6 +1567,7 @@
     ctx.translate(player.x + player.size/2, player.y + player.size/2);
     ctx.rotate(player.rotation);
     if(equippedTheme === 'theme2') { ctx.shadowColor = 'rgba(94,241,255,0.55)'; ctx.shadowBlur = 16; }
+    if(equippedTheme === 'theme_heidi') { ctx.shadowColor = 'rgba(255,105,180,0.55)'; ctx.shadowBlur = 16; }
     ctx.drawImage(img, -player.size/2, -player.size/2, player.size, player.size);
     ctx.restore();
   }
@@ -1618,7 +1684,7 @@
     gameState = STATE.DYING; deathTimer = 0; sfx.hit(); setTimeout(()=>sfx.explosion(), 90);
     screenShake = 22; flashOverlay.style.background = '#ffffff'; flashOverlay.style.opacity = '0.85'; chromaticOverlay.style.opacity = '0.6';
     const cx = player.x + player.size/2; const cy = player.y + player.size/2; addExplosionParticles(cx, cy); addExplosionParticles(cx, cy);
-    player.vy = 0; document.body.classList.add('shake'); hud.classList.add('hidden'); livesHud.classList.remove('visible');
+    player.vy = 0; document.body.classList.add('shake'); hud.classList.add('hidden'); livesHud.classList.remove('visible'); heidiTitle.classList.add('hidden');
   }
 
   function updateDeathExplosion(dt){
@@ -1643,6 +1709,7 @@
     hud.classList.add('hidden'); livesHud.classList.remove('visible'); startScreen.classList.remove('hidden');
     chromaticOverlay.style.opacity = 0; flashOverlay.style.opacity = 0; crackOverlay.style.opacity = 0; document.body.classList.remove('shake');
     wrap.style.animation = ''; score = 0; resetPlayer(); resetPipes(); bestTextStart.textContent = bestScore; showCurrencyHud();
+    applyEquippedSkin(); // Re-show heidiTitle if needed
   }
 
   function togglePause(){
@@ -1654,7 +1721,7 @@
      SECRET SEQUENCE (911)
   ====================================================== */
   let glitchIntensity = 0; let glitchTimer = 0; let explosionTimer = 0;
-  function triggerSecretSequence(){ gameState = STATE.SECRET_GLITCH; glitchIntensity = 0; glitchTimer = 0; hud.classList.add('hidden'); sfx.alarm(); }
+  function triggerSecretSequence(){ gameState = STATE.SECRET_GLITCH; glitchIntensity = 0; glitchTimer = 0; hud.classList.add('hidden'); heidiTitle.classList.add('hidden'); sfx.alarm(); }
   function updateGlitchPhase(dt){
     glitchTimer += dt; glitchIntensity = Math.min(glitchTimer / 3000, 1);
     chromaticOverlay.style.opacity = (0.3 + Math.random()*0.5*glitchIntensity).toFixed(2);
@@ -1729,7 +1796,8 @@
       loadImage('t2_default', SKINS[0].imageUrl),
       loadImage('pipe1', ASSET_URLS.pipe1),
       loadImage('pipe2', ASSET_URLS.pipe2),
-      loadImage('t1_pipe', ASSET_URLS.t1_pipe)
+      loadImage('t1_pipe', ASSET_URLS.t1_pipe),
+      loadImage('heidi', ASSET_URLS.heidi)
     ]).then(()=>{
       // Preload everything else
       SKINS.slice(1).forEach(s=>loadImage(s.id, s.imageUrl));
@@ -1752,7 +1820,9 @@
     const sel = document.getElementById('shopCurrencyVal'); if(sel) sel.textContent = totalCurrency;
   }
   function spawnCurrencyPopup(amount){
-    const el = document.createElement('div'); el.className = 'currency-popup'; el.textContent = '+' + amount + ' 💰';
+    const el = document.createElement('div'); el.className = 'currency-popup'; 
+    if(equippedTheme === 'theme_heidi') { el.style.color = '#ff69b4'; el.style.textShadow = '0 0 10px #ff1493'; }
+    el.textContent = '+' + amount + ' 💰';
     el.style.left = (player.x + player.size + 10) + 'px'; el.style.top = (Math.max(player.y - 20, 30)) + 'px'; popupLayer.appendChild(el); setTimeout(()=> el.remove(), 900);
   }
   
@@ -1778,9 +1848,15 @@
   const shopTabs = document.querySelectorAll('.shop-tab-btn');
   let currentShopTab = 'themes';
 
-  function showShopMsg(txt){
+  function showShopMsg(txt, pink = false){
     const existing = document.getElementById('shopToast'); if(existing) existing.remove();
     const t = document.createElement('div'); t.id='shopToast'; t.textContent=txt;
+    if(pink) {
+        t.style.background = 'rgba(255,105,180,0.15)';
+        t.style.borderColor = 'rgba(255,105,180,0.6)';
+        t.style.color = '#ffb6c1';
+        t.style.boxShadow = '0 0 20px rgba(255,105,180,0.3)';
+    }
     document.getElementById('gameWrap').appendChild(t);
     setTimeout(()=> { t.style.opacity = '0'; setTimeout(()=>t.remove(), 300); },1800);
   }
@@ -1832,23 +1908,39 @@
     shopContentArea.innerHTML = '';
     
     if (currentShopTab === 'themes') {
-      THEMES.forEach(t => {
-        const unlocked = unlockedThemes.includes(t.id);
+      let currentThemesList = [...THEMES];
+      if (heidiUnlocked) {
+          currentThemesList.push({
+              id: 'theme_heidi', name: 'FLAPPY HEIDI', price: 0,
+              imgUrl: ASSET_URLS.heidi,
+              desc: 'Secret Theme. Cute pink pipes & Heidi mode.',
+              isHeidi: true
+          });
+      }
+
+      currentThemesList.forEach(t => {
+        const unlocked = t.isHeidi ? true : unlockedThemes.includes(t.id);
         const active = equippedTheme === t.id;
         const div = document.createElement('div');
-        div.className = `shop-card ${active ? 'equipped' : ''}`;
+        div.className = `shop-card ${active ? 'equipped' : ''} ${t.isHeidi ? 'heidi' : ''}`;
         
         let actionHTML = '';
-        if (active) actionHTML = `<button class="shop-btn equipped-btn">✓ EQUIPPED</button>`;
-        else if (unlocked) actionHTML = `<button class="shop-btn equip-btn" onclick="equipItem('${t.id}', 'theme')">EQUIP</button>`;
-        else actionHTML = `<button class="shop-btn buy-btn" onclick="buyItem('${t.id}', 'theme')">${t.price} 💰 BUY</button>`;
+        if (active) {
+            actionHTML = `<button class="shop-btn ${t.isHeidi?'heidi-equipped-btn':'equipped-btn'}">✓ EQUIPPED</button>`;
+        }
+        else if (unlocked) {
+            actionHTML = `<button class="shop-btn ${t.isHeidi?'heidi-equip-btn':'equip-btn'}" onclick="equipItem('${t.id}', 'theme')">EQUIP</button>`;
+        }
+        else {
+            actionHTML = `<button class="shop-btn buy-btn" onclick="buyItem('${t.id}', 'theme')">${t.price} 💰 BUY</button>`;
+        }
 
         div.innerHTML = `
           <div class="card-img-wrap"><img src="${t.imgUrl}" class="card-img ${unlocked?'':'locked-img'}"></div>
           <div class="card-info">
-            <div class="card-title">${t.name}</div>
+            <div class="card-title" ${t.isHeidi?'style="color:#ffb6c1;"':''}>${t.name}</div>
             <div class="card-desc">${t.desc}</div>
-            ${unlocked ? '<div class="card-price free">UNLOCKED</div>' : `<div class="card-price">${t.price} 💰</div>`}
+            ${unlocked ? `<div class="card-price free" ${t.isHeidi?'style="color:#ff69b4;text-shadow:0 0 8px #ff69b4;"':''}>UNLOCKED</div>` : `<div class="card-price">${t.price} 💰</div>`}
           </div>
           <div class="card-actions">${actionHTML}</div>
         `;
@@ -1960,6 +2052,8 @@
      CHEAT CODE
   ====================================================== */
   const CHEAT_PASSWORD = 'morhafali123321';
+  const CHEAT_HEIDI    = 'flappyheidi';
+
   const cheatModal = document.getElementById('cheatModal');
   const cheatInput = document.getElementById('cheatInput');
   const cheatMsg = document.getElementById('cheatMsg');
@@ -1970,20 +2064,31 @@
   function closeCheat(){ cheatModal.classList.add('hidden'); }
 
   function submitCheat(){
-    const val = cheatInput.value;
+    const val = cheatInput.value.toLowerCase().trim();
     if(val === CHEAT_PASSWORD){
       if(cheatUsed){ cheatInput.className='cheat-input error'; cheatMsg.className='cheat-msg err'; cheatMsg.textContent='CHEAT ALREADY USED'; return; }
       cheatUsed = true; localStorage.setItem('skyfall_cheat_used','true');
       cheatInput.className='cheat-input success'; cheatMsg.className='cheat-msg ok'; cheatMsg.textContent='⚡ CHEAT ACTIVATED — +9999 POINTS ⚡';
-      addCurrency(9999); playCheatSuccessSound(); spawnCheatParticles(); setTimeout(()=> closeCheat(), 2200);
-    } else {
+      addCurrency(9999); playCheatSuccessSound(); spawnCheatParticles('#5ef1ff'); setTimeout(()=> closeCheat(), 2200);
+    } 
+    else if(val === CHEAT_HEIDI) {
+      if(heidiUnlocked){ cheatInput.className='cheat-input error'; cheatMsg.className='cheat-msg err'; cheatMsg.textContent='SECRET ALREADY UNLOCKED'; return; }
+      heidiUnlocked = true;
+      equippedTheme = 'theme_heidi';
+      saveData();
+      applyEquippedSkin();
+      cheatInput.className='cheat-input success-pink'; cheatMsg.className='cheat-msg ok-pink'; cheatMsg.textContent='🌸 FLAPPY HEIDI UNLOCKED 🌸';
+      playCheatSuccessSound(); spawnCheatParticles('#ff69b4'); 
+      setTimeout(()=> { closeCheat(); showShopMsg('SECRET THEME EQUIPPED!', true); }, 2200);
+    } 
+    else {
       cheatInput.className='cheat-input error'; cheatMsg.className='cheat-msg err'; cheatMsg.textContent='ACCESS DENIED'; playCheatDenySound(); setTimeout(()=>{ cheatInput.className='cheat-input'; }, 600);
     }
   }
 
   function playCheatSuccessSound(){ if(!actx||muted) return; [523,659,784,1047].forEach((f,i)=>{ const t0=actx.currentTime+i*0.08; const o=actx.createOscillator(); const g=actx.createGain(); o.type='square'; o.frequency.setValueAtTime(f,t0); g.gain.setValueAtTime(0.12,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+0.2); o.connect(g); g.connect(masterGain); o.start(t0); o.stop(t0+0.22); }); }
   function playCheatDenySound(){ if(!actx||muted) return; const t0=actx.currentTime; const o=actx.createOscillator(); const g=actx.createGain(); o.type='sawtooth'; o.frequency.setValueAtTime(220,t0); o.frequency.exponentialRampToValueAtTime(80,t0+0.3); g.gain.setValueAtTime(0.18,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+0.35); o.connect(g); g.connect(masterGain); o.start(t0); o.stop(t0+0.38); }
-  function spawnCheatParticles(){ const container = document.getElementById('cheatParticles'); for(let i=0;i<30;i++){ const p = document.createElement('div'); const size = 4 + Math.random()*6; const x = Math.random()*100; const col = Math.random()<0.5 ? '#5ef1ff' : '#ffb648'; p.style.cssText=`position:absolute;width:${size}px;height:${size}px;background:${col};border-radius:50%;left:${x}%;top:100%;animation:cheatPtcl ${0.6+Math.random()*0.8}s ease-out ${Math.random()*0.3}s forwards;box-shadow:0 0 6px ${col};`; container.appendChild(p); setTimeout(()=>p.remove(),1500); } if(!document.getElementById('cheatPtclStyle')){ const s=document.createElement('style'); s.id='cheatPtclStyle'; s.textContent='@keyframes cheatPtcl{0%{transform:translateY(0) scale(1);opacity:1;}100%{transform:translateY(-200px) scale(0);opacity:0;}}'; document.head.appendChild(s); } }
+  function spawnCheatParticles(forceColor = null){ const container = document.getElementById('cheatParticles'); for(let i=0;i<30;i++){ const p = document.createElement('div'); const size = 4 + Math.random()*6; const x = Math.random()*100; const col = forceColor || (Math.random()<0.5 ? '#5ef1ff' : '#ffb648'); p.style.cssText=`position:absolute;width:${size}px;height:${size}px;background:${col};border-radius:50%;left:${x}%;top:100%;animation:cheatPtcl ${0.6+Math.random()*0.8}s ease-out ${Math.random()*0.3}s forwards;box-shadow:0 0 6px ${col};`; container.appendChild(p); setTimeout(()=>p.remove(),1500); } if(!document.getElementById('cheatPtclStyle')){ const s=document.createElement('style'); s.id='cheatPtclStyle'; s.textContent='@keyframes cheatPtcl{0%{transform:translateY(0) scale(1);opacity:1;}100%{transform:translateY(-200px) scale(0);opacity:0;}}'; document.head.appendChild(s); } }
 
   document.getElementById('cheatSubmitBtn').addEventListener('click',()=>{ initAudio(); submitCheat(); });
   document.getElementById('cheatCloseBtn').addEventListener('click',()=>closeCheat());
